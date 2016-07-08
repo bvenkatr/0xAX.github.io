@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> &middot; Just a memo</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.17-DEV" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content=" &middot; Just a memo">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content=" &middot; Just a memo">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="https://0xax.github.io/css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="Just a memo" href="https://0xax.github.io/index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="https://0xax.github.io">Just a memo</a></h1>
+            <h2 class="brand-tagline"> Just a memo </h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="https://twitter.com/0xAX"><i class="fa fa-twitter"></i> Twitter</a>
+                </li>
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="https://github.com/0xAX "><i class="fa fa-github-alt"></i> github</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="https://0xax.github.io/index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                <h1 class="content-subhead">01 Jan 0001, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://0xax.github.io/elixir_ybot/" class="post-title"></a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+                    
+                    <div class="post-share">
+                        <div class="post-share-links">
+                            <h4 style="">Share</h4>
+                            <a href="#" data-type="facebook" data-url="https://0xax.github.io/elixir_ybot/" data-title="" data-description="" data-media="" class="prettySocial fa fa-facebook"></a>
+                            <a href="#" data-type="googleplus" data-url="https://0xax.github.io/elixir_ybot/" data-description="" class="prettySocial fa fa-google-plus"></a>
+                            
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="post-description">
+                        <p>Title: Using Elixir to write Ybot plugins
+Date: 2014-06-01
+Tags: elixir
+Authors:  Alexander Kuleshov</p>
+
+<p><a href="https://github.com/OtpChatBot/Ybot">Ybot</a> - is a customizable bot which was inspired by GitHub&rsquo;s Hubot and written with Erlang programming language. You can create pligin for Ybot in one of following languages:</p>
+
+<ul>
+<li>Python</li>
+<li>Ruby</li>
+<li>Shell</li>
+<li>Perl</li>
+<li>Erlang/OTP</li>
+<li>Elixir</li>
+<li>Scala</li>
+</ul>
+
+<p>In this post i will tell you to create Ybot plugin with Elixir. For example we need to create Ybot&rsquo;s plugin which will get information about commits from the Github&rsquo;s repository and will send it to chat if somebody updated your repository. We will use Github API v3. For getting info about Github repository commits we must send request:</p>
+
+<pre><code>GET /repos/:owner/:repo/commits
+</code></pre>
+
+<p>Let&rsquo;s create Elixir module and send request to the Github API:</p>
+
+<pre><code class="language-elixir">defmodule GithubCommitsNotification do
+
+    @moduledoc &quot;&quot;&quot;
+        Github commits notification Ybot plugin.
+    &quot;&quot;&quot;
+
+    @repo 'YBOT'
+    @author '0xAX'
+    @github_api_url  'https://api.github.com/repos/' ++ @author ++ '/' ++ @repo ++ '/commits'
+
+    @ybot_api_url 'http://localhost:8090/memories/'
+    @ybot_plugin_api_url 'http://localhost:8090/memories/?plugin=elixir_github_commits_notification'
+
+    :ok = :application.start :inets
+    :ok = :application.start :asn1
+    :ok = :application.start :crypto
+    :ok = :application.start :public_key
+    :ok = :application.start :ssl
+
+    # Send request to the Github API
+    {:ok, {_, _, body}} = :httpc.request(:get, {@github_api_url, []}, [{:ssl,[{:verify,0}]}], [])
+    # parse response
+    [resp | _] = JSON.parse(body)
+end
+</code></pre>
+
+<p>Here you can see simple Elixir module with some attributes (@repo, @author and etc&hellip;), and sending http &lsquo;GET&rsquo; request to the Github commits API. We must get response like this:</p>
+
+<pre><code class="language-erlang">[
+  {
+    &quot;url&quot;: &quot;https://api.github.com/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e&quot;,
+    &quot;sha&quot;: &quot;6dcb09b5b57875f334f61aebed695e2e4193db5e&quot;,
+    &quot;commit&quot;: {
+      &quot;url&quot;: &quot;https://api.github.com/repos/octocat/Hello-World/git/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e&quot;,
+      &quot;author&quot;: {
+        &quot;name&quot;: &quot;Monalisa Octocat&quot;,
+        &quot;email&quot;: &quot;support@github.com&quot;,
+        &quot;date&quot;: &quot;2011-04-14T16:00:49Z&quot;
+      },
+      &quot;committer&quot;: {
+        &quot;name&quot;: &quot;Monalisa Octocat&quot;,
+        &quot;email&quot;: &quot;support@github.com&quot;,
+        &quot;date&quot;: &quot;2011-04-14T16:00:49Z&quot;
+      },
+      &quot;message&quot;: &quot;Fix all the bugs&quot;,
+      &quot;tree&quot;: {
+        &quot;url&quot;: &quot;https://api.github.com/repos/octocat/Hello-World/tree/6dcb09b5b57875f334f61aebed695e2e4193db5e&quot;,
+        &quot;sha&quot;: &quot;6dcb09b5b57875f334f61aebed695e2e4193db5e&quot;
+      }
+    },
+    &quot;author&quot;: {
+      &quot;login&quot;: &quot;octocat&quot;,
+      &quot;id&quot;: 1,
+      &quot;avatar_url&quot;: &quot;https://github.com/images/error/octocat_happy.gif&quot;,
+      &quot;gravatar_id&quot;: &quot;somehexcode&quot;,
+      &quot;url&quot;: &quot;https://api.github.com/users/octocat&quot;
+    },
+    &quot;committer&quot;: {
+      &quot;login&quot;: &quot;octocat&quot;,
+      &quot;id&quot;: 1,
+      &quot;avatar_url&quot;: &quot;https://github.com/images/error/octocat_happy.gif&quot;,
+      &quot;gravatar_id&quot;: &quot;somehexcode&quot;,
+      &quot;url&quot;: &quot;https://api.github.com/users/octocat&quot;
+    },
+    &quot;parents&quot;: [
+      {
+        &quot;url&quot;: &quot;https://api.github.com/repos/octocat/Hello-World/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e&quot;,
+        &quot;sha&quot;: &quot;6dcb09b5b57875f334f61aebed695e2e4193db5e&quot;
+      }
+    ]
+  }
+]
+</code></pre>
+
+<p>Now we must get some fields from this response, like a commit&rsquo;s author, commit message and etc&hellip;:</p>
+
+<pre><code class="language-elixir"># get sha
+{&lt;&lt;&quot;sha&quot;&gt;&gt;, sha} = :lists.keyfind(&lt;&lt;&quot;sha&quot;&gt;&gt;, 1, resp)
+
+# get author
+{_, commit} = :lists.keyfind(&lt;&lt;&quot;commit&quot;&gt;&gt;, 1, resp)
+{_, author} = :lists.keyfind(&lt;&lt;&quot;author&quot;&gt;&gt;, 1, commit)
+{_, name} = :lists.keyfind(&lt;&lt;&quot;name&quot;&gt;&gt;, 1, author)
+
+# get commit message
+{&lt;&lt;&quot;message&quot;&gt;&gt;, message} = :lists.keyfind(&lt;&lt;&quot;message&quot;&gt;&gt;, 1, commit)
+</code></pre>
+
+<p>Ybot has an own storage with REST API, thank you to <a href="https://twitter.com/tajgur">@tajgur</a>. You can find documentation for it - here. And also Ybot has notifications support, in other words you can set up Ybot that it will execute your plugin by timeout and send result to you. For example you can configure Ybot that it will send to you status of your system every hour and etc&hellip; We have memory API in Ybot and we can get last information about repository commits, check it, save last commit if it changed and will send update to the chat. Remeber that Ybot&rsquo;s plugin must write it&rsquo;s result to the <code>STDOUT</code> in the end of execution. Here is the full source code of this plugin:</p>
+
+<pre><code class="language-elixir">defmodule GithubCommitsNotification do
+
+    @moduledoc &quot;&quot;&quot;
+        Github commits notification Ybot plugin.
+    &quot;&quot;&quot;
+
+    @repo 'YBOT'
+    @author '0xAX'
+    @github_api_url  'https://api.github.com/repos/' ++ @author ++ '/' ++ @repo ++ '/commits'
+
+    @ybot_api_url 'http://localhost:8090/memories/'
+    @ybot_plugin_api_url 'http://localhost:8090/memories/?plugin=elixir_github_commits_notification'
+
+    :ok = :application.start :inets
+    :ok = :application.start :asn1
+    :ok = :application.start :crypto
+    :ok = :application.start :public_key
+    :ok = :application.start :ssl
+
+    # Send request to the Github API
+    {:ok, {_, _, body}} = :httpc.request(:get, {@github_api_url, []}, [{:ssl,[{:verify,0}]}], [])
+    # parse response
+    [resp | _] = JSON.parse(body)
+
+    # get sha
+    {&lt;&lt;&quot;sha&quot;&gt;&gt;, sha} = :lists.keyfind(&lt;&lt;&quot;sha&quot;&gt;&gt;, 1, resp)
+
+    # get author
+    {_, commit} = :lists.keyfind(&lt;&lt;&quot;commit&quot;&gt;&gt;, 1, resp)
+    {_, author} = :lists.keyfind(&lt;&lt;&quot;author&quot;&gt;&gt;, 1, commit)
+    {_, name} = :lists.keyfind(&lt;&lt;&quot;name&quot;&gt;&gt;, 1, author)
+
+    # get commit message
+    {&lt;&lt;&quot;message&quot;&gt;&gt;, message} = :lists.keyfind(&lt;&lt;&quot;message&quot;&gt;&gt;, 1, commit)
+
+    result = 'New commit to the repo - ' ++ @repo ++  ' sha: ' ++ :erlang.binary_to_list(sha) ++ ' author: ' ++ :erlang.binary_to_list(name)
+             ++ ' message: ' ++ :erlang.binary_to_list(message)
+
+    {:ok, {_, _, body}} = :httpc.request(:get, {@ybot_plugin_api_url, []}, [], [])
+
+    case body do
+        '[]' -&gt;
+            data = JSON.generate([plugin: &quot;elixir_github_commits_notification&quot;,
+                                  key: &quot;sha&quot;,
+                                  value: sha])
+
+            # save new record to Ybot storage
+            :httpc.request(:post, {@ybot_api_url, [], 'application/json', data}, [], [])
+            # write result to stdout
+            :io.format(&quot;~p~n&quot;, [result])
+        _ -&gt;
+            {_, val} = :lists.keyfind(&lt;&lt;&quot;value&quot;&gt;&gt;, 1, :lists.nth(1, JSON.parse(body)))
+            {_, id}  = :lists.keyfind(&lt;&lt;&quot;id&quot;&gt;&gt;, 1, :lists.nth(1, JSON.parse(body)))
+
+            cond do
+                val == val -&gt;
+                    :io.format &quot;&quot;
+                true -&gt;
+                    # delete old commit
+                    :httpc.request(:delete, {@ybot_api_url ++ binary_to_list(id), []}, [], [])
+
+                    data = JSON.generate([plugin: &quot;elixir_github_commits_notification&quot;,
+                                          key: &quot;sha&quot;,
+                                          value: sha])
+
+                    # save new record to Ybot storage
+                    :httpc.request(:post, {@ybot_api_url, [], 'application/json', data}, [], [])
+                    # write result to stdout
+                    :io.format(&quot;~p~n&quot;, [result])
+            end
+    end
+end
+</code></pre>
+
+<p>Put this plugin to Ybot&rsquo;s <code>notifications</code> directory and set up it in configuration file:</p>
+
+<pre><code class="language-erlang">{notification, [
+    {github_commits_notification, [irc, twitter], 600}
+]},
+</code></pre>
+
+<p>Where:</p>
+
+<ul>
+<li>github_commits_notifications - plugin name</li>
+<li>[irc, twitter] - list of transports in which Ybot will send report</li>
+<li>600 - timeout in seconds</li>
+</ul>
+
+<p>You can set up any transport which Ybot supports:</p>
+
+<ul>
+<li>IRC</li>
+<li>XMPP</li>
+<li>Campfire</li>
+<li>HipChat</li>
+<li>Skype</li>
+<li>HTTP</li>
+<li>FlowDock</li>
+<li>SMTP</li>
+<li>Twitter</li>
+</ul>
+
+                    </div>
+                    
+                </section>
+            </div>
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+            <li>Powered by <a class="hugo" href="https://gohugo.io/" target="_blank">hugo</a></li>
+        </ul>
+    </div>
+</div>
+<script src="https://0xax.github.io/js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

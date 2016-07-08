@@ -1,0 +1,602 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Grub on Just a memo</title>
+    <link>https://0xAX.github.io/categories/grub/</link>
+    <description>Recent content in Grub on Just a memo</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 05 Jan 2016 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://0xAX.github.io/categories/grub/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>How does GNU GRUB work</title>
+      <link>https://0xax.github.io/grub/</link>
+      <pubDate>Tue, 05 Jan 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://0xax.github.io/grub/</guid>
+      <description>
+
+&lt;p&gt;This blog post is closely related with my interest in low-level stuff. As you already may know, I&amp;rsquo;ve started to be interested in such things like: How &lt;code&gt;N&lt;/code&gt; works, where the &lt;code&gt;N&lt;/code&gt; is something like - what does occur when we turn on the computer, pressing key on keyboard, how does an operating system load a program and many many more. I have found answers on some of my questions. You can look on the set if
+blog &lt;a href=&#34;http://0xax.github.io/tag/assembler.html&#34;&gt;posts&lt;/a&gt; which are decribe some aspects of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Assembly_language&#34;&gt;assembly&lt;/a&gt; programming or the &lt;a href=&#34;https://0xax.gitbooks.io/linux-insides/content/index.html&#34;&gt;linux-insides&lt;/a&gt; book which describes internals of the Linux kernel.&lt;/p&gt;
+
+&lt;p&gt;Yes. This answered on some of my questions, but not at all. Lately, besides the Linux kernel, I&amp;rsquo;ve also learned internals of the &lt;a href=&#34;https://en.wikipedia.org/wiki/GNU_GRUB&#34;&gt;GNU GRUB&lt;/a&gt;. In the previous year I&amp;rsquo;ve got many thank you words from different people for the &lt;code&gt;linux-insides&lt;/code&gt;. Seems that low-level stuff is interesting not only for me and I decided to write this blog post which will cover some parts of the &lt;code&gt;GNU GRUB&lt;/code&gt; and we will see answer on the question which is in the title of this post - How GNU GRUB works. Hope, that it will be useful for somebody.&lt;/p&gt;
+
+&lt;p&gt;If you use Linux, you likely know about &lt;code&gt;GNU GRUB&lt;/code&gt;. But just in case, wikipedia says that:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;GNU GRUB (short for GNU GRand Unified Bootloader) is a boot loader package from the GNU Project&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;So, the GNU GRUB is a bootloader. Main point of a bootloader is to load an operating system kernel and to transfer control to it. GNU GRUB has many features like support of different types of executable file formats, dynamic configuration, graphical menu interface, support for different types of file systems and etc.&lt;/p&gt;
+
+&lt;p&gt;So the point of the bootloader is clear - to load an operating system kernel. In this post we will see how the GNU GRUB loads the Linux kernel. But before this let&amp;rsquo;s take a little look on architecture of the GNU GRUB. Even if you are newbie Linux user, you can guess that all &lt;code&gt;boot&lt;/code&gt; related data is placed in the &lt;code&gt;/boot&lt;/code&gt; directory. For me it looks like:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://s30.postimg.org/3mfl4a681/2016_01_02_193818_933x47_scrot.png&#34; alt=&#34;boot-dir&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This directory contains two &lt;a href=&#34;https://en.wikipedia.org/wiki/Initrd&#34;&gt;initrd&lt;/a&gt; images, the Linux kernel image and the &lt;code&gt;grub&lt;/code&gt; directory which contains GNU GRUB related data:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://s17.postimg.org/bgttwn3u7/ls_boot.png&#34; alt=&#34;boot-grub-dir&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Directory with fonts, GNU GRUB configuration file, themes, locales, the &lt;code&gt;grubenv&lt;/code&gt; file that contains GNU GRUB environment variables which are can be used in runtime and the &lt;code&gt;i386-pc&lt;/code&gt; directory which contains GNU GRUB images and modules. Content of the &lt;code&gt;i386-pc&lt;/code&gt; directory is the most interesting for us. Yes the &lt;code&gt;/boot/grub&lt;/code&gt; directory contains many other interesting directories/files besides the &lt;code&gt;/boot/grub&lt;/code&gt; directory, but this post will not cover topics like how to make GNU GRUB menu beautiful, readable and etc. If we will open the &lt;code&gt;/boot/grub/i386-pc&lt;/code&gt; directory, we will find three types of files there:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;*.lst&lt;/code&gt; files - contain lists of available options depends on file. For example, the &lt;code&gt;/boot/grub/i386-pc/video.lst&lt;/code&gt; contains list of available video modes or the &lt;code&gt;/boot/grub/i386-pc/fs.list&lt;/code&gt; file contains information about supported file systems;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;*.mod&lt;/code&gt; files - 32-bit &lt;a href=&#34;https://en.wikipedia.org/wiki/Executable_and_Linkable_Format&#34;&gt;ELF&lt;/a&gt; files which provide additional functional for GNU GRUB. For example, the &lt;code&gt;/boot/grub/i386-pc/acpi.mod&lt;/code&gt; adds support of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Advanced_Configuration_and_Power_Interface&#34;&gt;Advanced Configuration and Power Interface&lt;/a&gt; which is used to perform various power-related functions or &lt;code&gt;/boot/grub/i386-pc/ext2.mod&lt;/code&gt; provides support for &lt;a href=&#34;https://en.wikipedia.org/wiki/Ext2&#34;&gt;ext2&lt;/a&gt; file system;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;*.img&lt;/code&gt; files - only two files: &lt;code&gt;/boot/grub/i386-pc/boot.img&lt;/code&gt; and &lt;code&gt;/boot/grub/i386-pc/core.img&lt;/code&gt;. We need to look closer on this file.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The first &lt;code&gt;boot.img&lt;/code&gt; file is the entry of the bootloader on a &lt;a href=&#34;https://en.wikipedia.org/wiki/BIOS&#34;&gt;PC BIOS&lt;/a&gt; system. The content of this file is written to the first sector of the disk or in the &lt;a href=&#34;https://en.wikipedia.org/wiki/Master_boot_record&#34;&gt;Master boot record&lt;/a&gt;. The main point of the &lt;code&gt;boot.img&lt;/code&gt; is to load first sector (512 bytes) of the &lt;code&gt;core.img&lt;/code&gt; which will continue to do main job of the bootloader. As &lt;code&gt;boot.img&lt;/code&gt; is in the master boot record, it must meet several conditions. First of all its size must be 512-bytes and the last two bytes must be &lt;code&gt;0xAA55&lt;/code&gt;. We can see that &lt;code&gt;boot.img&lt;/code&gt; is 512 bytes size file:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://s2.postimg.org/7e8s3cuzd/boot_img.png&#34; alt=&#34;boot.img&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;and contains two magic bytes in the end:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;~$ hexdump -s 510 /boot/grub/i386-pc/boot.img
+00001fe aa55
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Besides two magic bytes, the &lt;code&gt;Master boot record&lt;/code&gt; must contain bootstrap code which will load second stage of the bootloader which can be much more than 512 bytes and &lt;a href=&#34;https://en.wikipedia.org/wiki/Partition_table&#34;&gt;partition table&lt;/a&gt; with four 16-bytes partition entries. Generall structure of the &lt;code&gt;MBR&lt;/code&gt; must be like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;0   +--------------------+
+    |                    |
+    |   Bootstrap code   |
+446 |                    |
+    |                    |
+    |  Partition entry 1 |
+    |  Partition entry 2 |
+    |  Partition entry 3 |
+    |  Partition entry 4 |
+510 |        0x55        |
+511 |        0xaa        |
+512 +--------------------+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The second &lt;code&gt;core.img&lt;/code&gt; file does the main job for us. It contains file system drivers, so it can load configuration from the &lt;code&gt;/boot/grub/grub.cfg&lt;/code&gt; file and modules. The main point of the &lt;code&gt;core.img&lt;/code&gt; is to transfer control to the last - second stage of the grub. At this moment, the GNU GRUB will have loaded modules, so it will know everything about operating system kernels which are needed to load. It draws menu, reacts on selection and etc.&lt;/p&gt;
+
+&lt;p&gt;Before we will start to dive into low-level source code of the GNU GRUB. We need to understand how all of this data occurs on a disk of computer. Besides bootloader functions, the GNU GRUB provides a rich set of utils:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://s22.postimg.org/z9plrxbld/grub_utils.png&#34; alt=&#34;grub-utils&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;And one of this util may help us to install GNU GRUB on a computer. The name of this util is - &lt;code&gt;grub-install&lt;/code&gt;. As we can read in the &lt;code&gt;grub-instal&lt;/code&gt; manual page. The &lt;code&gt;grub-install&lt;/code&gt; util:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;grub-install - install GRUB on your drive&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;We just saw a little about GNU GRUB related files and now is time to see how the &lt;code&gt;grub-install&lt;/code&gt; installs master boot record and this files. Let&amp;rsquo;s look on the source code if the &lt;code&gt;grub-install&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;the-grub-install-util&#34;&gt;The grub-install util&lt;/h2&gt;
+
+&lt;p&gt;Implementation of the GNU GRUB utils is located in the &lt;code&gt;utils&lt;/code&gt; directory. In our case, implementation of the &lt;code&gt;grub-install&lt;/code&gt; utils is in the &lt;code&gt;grub-install.c&lt;/code&gt;. If we will look on its &lt;code&gt;main&lt;/code&gt; function, we will see that it starts from the call of the &lt;code&gt;grub_util_host_init&lt;/code&gt; function which defined in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/osdep/basic/init.c&#34;&gt;grub-core/osdep/basic/init.c&lt;/a&gt; source code file and produces standard stuff for a C programs, like the call of the &lt;code&gt;set_program_name&lt;/code&gt;, setting locale and etc.&lt;/p&gt;
+
+&lt;p&gt;After the first inital initialization, we can see the call of the &lt;code&gt;arg_parse&lt;/code&gt; function which as we may understand from the name - parses command line arguments of the &lt;code&gt;grub-install&lt;/code&gt; util. We will not dive into details of implementation of the &lt;code&gt;argp_parse&lt;/code&gt; function in ths post. I don&amp;rsquo;t know how about you, but now, its interesting for me only low-level stuff in the GRUB. At the next step as we parsed command line arguments of the &lt;code&gt;grub-install&lt;/code&gt; util, we start to check these arguments and do something depend on their values. First of all, we check the &lt;code&gt;-v&lt;/code&gt; or &lt;code&gt;--verbose&lt;/code&gt; flag which allows us to see verbose output of the &lt;code&gt;grub-instal&lt;/code&gt; work. If this flag is set we set &lt;code&gt;debug=all&lt;/code&gt; environment variable of GRUB with the call of the &lt;code&gt;grub_env_set&lt;/code&gt; function:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;  if (verbosity &amp;gt; 1)
+    grub_env_set (&amp;quot;debug&amp;quot;, &amp;quot;all&amp;quot;);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;GRUB stores its environment variables in the hashtable which is represented by the following structure:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;struct grub_env_context
+{
+  struct grub_env_var *vars[HASHSZ];
+  struct grub_env_context *prev;
+};
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The implementation of the &lt;code&gt;grub_env_set&lt;/code&gt; function is simple. It just calculates index in the &lt;code&gt;grub_env_context&lt;/code&gt; hashtable and stores a given variable in it. After this we can see the call of the:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;grub_util_load_config (&amp;amp;config);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;function. This function just fills the &lt;code&gt;grub_util_config&lt;/code&gt; structure from the GRUB configuration file (located in the &lt;code&gt;/etc/default/grub&lt;/code&gt;). This structure consists from two fields. Both fields are depends on the following environment variables:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;GRUB_ENABLE_CRYPTODISK&lt;/code&gt; - allows to install GRUB on the encrypted disk.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;GRUB_DISTRIBUTOR&lt;/code&gt; - provides string which is associated with the distributor. For example, for me now it is:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;pre&gt;&lt;code&gt;$ cat /etc/default/grub | grep DIST
+GRUB_DISTRIBUTOR=&amp;quot;Arch&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;After this we check the &lt;code&gt;GRUB_DISTRIBUTOR&lt;/code&gt; value and if we&amp;rsquo;ve found it in the GRUB configuration file we save it in the &lt;code&gt;bootloader_id&lt;/code&gt; variable. In other way the &lt;code&gt;bootloader_id&lt;/code&gt; will contain &lt;code&gt;&amp;quot;grub&amp;quot;&lt;/code&gt; string by default. At the next step we need to check current platform and exit in a failure case. The &lt;code&gt;grub-install&lt;/code&gt; util does it with the call of the &lt;code&gt;get_default_platform&lt;/code&gt; function. This function checks &lt;code&gt;gcc&lt;/code&gt; directives and returns our platform:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;static const char *
+get_default_platform (void)
+{
+#ifdef __powerpc__
+   return &amp;quot;powerpc-ieee1275&amp;quot;;
+   ...
+   ...
+   ...
+#elif defined (__amd64__) || defined (__x86_64__) || defined (__i386__)
+   return grub_install_get_default_x86_platform ();
+#else
+   return NULL;
+#endif
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The &lt;code&gt;grub_install_get_default_x86_platform ()&lt;/code&gt; function returns &lt;code&gt;x86_64-efi&lt;/code&gt;, &lt;code&gt;i386-efi&lt;/code&gt; or just &lt;code&gt;i386-pc&lt;/code&gt; on &lt;code&gt;x86_64&lt;/code&gt; platform. So, now we know target machine and now we need to get the path of directory where &lt;code&gt;grub-install&lt;/code&gt; util will install its modules. In our case it will be &lt;code&gt;/lib/grub/i386-pc&lt;/code&gt; and the &lt;code&gt;grub_install_source_directory&lt;/code&gt; variable will contain this path. Besides the name of the target platform, we need to get information about this platform. The &lt;code&gt;grub-install&lt;/code&gt; util will do it with the call of the &lt;code&gt;grub_install_get_target()&lt;/code&gt; function. The main point of this function is to return item from the &lt;code&gt;platforms&lt;/code&gt; array:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;static struct
+{
+  const char *cpu;
+  const char *platform;
+} platforms[GRUB_INSTALL_PLATFORM_MAX] =
+  {
+    [GRUB_INSTALL_PLATFORM_I386_PC] =          { &amp;quot;i386&amp;quot;,    &amp;quot;pc&amp;quot;        },
+    [GRUB_INSTALL_PLATFORM_I386_EFI] =         { &amp;quot;i386&amp;quot;,    &amp;quot;efi&amp;quot;       },
+    [GRUB_INSTALL_PLATFORM_I386_QEMU] =        { &amp;quot;i386&amp;quot;,    &amp;quot;qemu&amp;quot;      },
+	...
+	...
+	...
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and print information about it:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;{
+    char *platname = grub_install_get_platform_name (platform);
+    fprintf (stderr, _(&amp;quot;Installing for %s platform.\n&amp;quot;), platname);
+    free (platname);
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;At the next step we need to select GRUB&amp;rsquo;s disk module depends on the platform name. In our case it will be &lt;code&gt;biosdisk&lt;/code&gt; module:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;switch (platform)
+{
+    case GRUB_INSTALL_PLATFORM_I386_PC:
+      if (!disk_module)
+	disk_module = xstrdup (&amp;quot;biosdisk&amp;quot;);
+      break;
+	  ...
+	  ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The next step after we have selected disk module is initialization of all modules:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;  grub_init_all ();
+  grub_gcry_init_all ();
+  grub_hostfs_init ();
+  grub_host_init ();
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The source code of GRUB modules is located in different parts of GRUB source code, but each module contains definition of the &lt;code&gt;GRUB_MOD_INIT&lt;/code&gt; and &lt;code&gt;GRUB_MOD_FINI&lt;/code&gt; macros which make all initialization stuff. After all modules are initialized we are copying/installing to the &lt;code&gt;/boot/grub&lt;/code&gt; directory all GRUB files (modules, locales, themes and etc.) to the source directory by the call of the:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;  grub_install_copy_files (grub_install_source_directory,
+			   grubdir, platform);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;function. After all of this manipulations, the &lt;code&gt;grub-install&lt;/code&gt; util executes many different thing. It creates the &lt;code&gt;/boot/grub/envblk&lt;/code&gt; file which is the GRUB environment block that is stores GRUB&amp;rsquo;s environment variables. You can use the &lt;code&gt;grub-editevn --list&lt;/code&gt; util to lust the GRUB environment variables. At the next step, the &lt;code&gt;grub-install&lt;/code&gt; checks the given device, tries to understand type of files system on a given device and loads module for the certain file system type. It loads the module which provides functional for a disk reading. You can remember that it is the &lt;code&gt;biosdisk&lt;/code&gt; for us. But the main point of the &lt;code&gt;grub-install&lt;/code&gt; utils is to install &lt;a href=&#34;https://en.wikipedia.org/wiki/Master_boot_record&#34;&gt;MBR&lt;/a&gt;, the &lt;code&gt;core.img&lt;/code&gt; and the &lt;code&gt;kernel.img&lt;/code&gt;. The most interesting part for us is the call of the:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;if (install_bootsector)
+	grub_util_bios_setup (platdir, &amp;quot;boot.img&amp;quot;, &amp;quot;core.img&amp;quot;,
+                          install_drive, force,
+				          fs_probe, allow_floppy, add_rs_codes);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;function. The &lt;code&gt;grub_util_bios_setup&lt;/code&gt; function defined in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/util/setup.c&#34;&gt;util/setup.c&lt;/a&gt; source code file and its main point is to setup MBR. This function takes eight arguments:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;platdir&lt;/code&gt; - platform dependend directory wich contains GRUB modules, image and etc. (For example - &lt;code&gt;/lib/grub/i386-pc&lt;/code&gt;);&lt;/li&gt;
+&lt;li&gt;GRUB boot image;&lt;/li&gt;
+&lt;li&gt;GRUB core image;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;install_drive&lt;/code&gt; - name of the device where to install GRUB;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;force&lt;/code&gt; - install or not if any problems are presented;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;fs_probe&lt;/code&gt; - allows GRUB to skip file system probes for the given device;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;allow_floppy&lt;/code&gt; - makes a drive bootable as floppy;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;add_rs_codes&lt;/code&gt; - shows apply or not &lt;a href=&#34;https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction&#34;&gt;reed-solomon&lt;/a&gt; codes during &lt;code&gt;core-img&lt;/code&gt; embedding.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The &lt;code&gt;grub_util_bios_setup&lt;/code&gt; function reads the &lt;code&gt;boot.img&lt;/code&gt; and the &lt;code&gt;core.img&lt;/code&gt; from the disk, sets the root device, copies &lt;a href=&#34;https://en.wikipedia.org/wiki/Partition_table&#34;&gt;partition table&lt;/a&gt; (will see more about it later), reads partition table, checks errors and writes the &lt;code&gt;core.img&lt;/code&gt; and the &lt;code&gt;boot.img&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;for (i = 0; i &amp;lt; nsec; i++)
+	grub_disk_write (dest_dev-&amp;gt;disk, sectors[i], 0,
+		             GRUB_DISK_SECTOR_SIZE,
+		             core_img + i * GRUB_DISK_SECTOR_SIZE);
+...
+...
+...
+if (grub_disk_write (dest_dev-&amp;gt;disk, BOOT_SECTOR,
+                     0, GRUB_DISK_SECTOR_SIZE, boot_img))
+    grub_util_error (&amp;quot;%s&amp;quot;, grub_errmsg);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That&amp;rsquo;s all. Now we have installed master boot record and other boot-related GRUB parts on our machine.&lt;/p&gt;
+
+&lt;h2 id=&#34;booting-process&#34;&gt;Booting process&lt;/h2&gt;
+
+&lt;p&gt;The booting process starts when BIOS reads first sector (first 512 bytes) from a disk and loads it into memory by &lt;code&gt;0x0000:0x7c000&lt;/code&gt; address. The GNU GRUB MBR code is implemented in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/boot/i386/pc/boot.S&#34;&gt;grub-core/boot/i386/pc/boot.S&lt;/a&gt; assembly source code file. As I already wrote above, the main point of the master boot record bootstrap code is to load second second sector from disk and control transfer to it. Besides this, bootstrap code does not do almost anything, because as you remember it is very small, only 512 bytes size. Let&amp;rsquo;s look on the implementation of the bootstrap code.&lt;/p&gt;
+
+&lt;p&gt;In the beginning of the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/boot/i386/pc/boot.S&#34;&gt;grub-core/boot/i386/pc/boot.S&lt;/a&gt; source code file we can see definition of the global labels and the jump to the local label:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;.globl _start, start;
+_start:
+start:
+	jmp	LOCAL(after_BPB)
+	nop
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The &lt;code&gt;LOCAL&lt;/code&gt; macro defined in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/include/grub/symbol.h&#34;&gt;include/grub/symbol.h&lt;/a&gt; header file and expands to the concatenation of the &lt;code&gt;L_&lt;/code&gt; and given symbol:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;#define LOCAL(sym)	L_ ## sym
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;in our case it will expand to the &lt;code&gt;L_after_BPB&lt;/code&gt; label. This label represents the &lt;a href=&#34;https://en.wikipedia.org/wiki/BIOS_parameter_block&#34;&gt;BIOS parameter block&lt;/a&gt; which contains information about physycal layout of a disk. At the start of the &lt;code&gt;L_after_BPB&lt;/code&gt; label we disable interrupts with the &lt;code&gt;cli&lt;/code&gt; instruction to prevent erasing of the &lt;code&gt;dl&lt;/code&gt; register which stores number of hard drive from which we have loaded. After this we test value of the &lt;code&gt;dl&lt;/code&gt; register and set to &lt;code&gt;0x80&lt;/code&gt; (first hard drive in the system) if buggy BIOS did not set it:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	cli
+    testb   $0x80, %dl
+    jz      2f
+2:
+    movb    $0x80, %dl
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;At the next step we set data segment and stack segment registers to the known value - it is zero in our case, setup stack pointer to the top of the stack segment (&lt;code&gt;0x2000&lt;/code&gt;) and enable interrupts again, because from this point we are safe now:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	xorw	%ax, %ax
+	movw	%ax, %ds
+	movw	%ax, %ss
+
+	movw	$GRUB_BOOT_MACHINE_STACK_SEG, %sp
+	sti		/* we&#39;re safe again */
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We just made enabled interrupts, so we can print &lt;code&gt;Welcome&lt;/code&gt; message to the screen with the &lt;code&gt;MSG&lt;/code&gt; macro:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;MSG(notification_string)
+
+#define MSG(x)	movw $x, %si; call LOCAL(message)
+
+notification_string:	.asciz &amp;quot;GRUB &amp;quot;
+
+LOCAL(message):
+	lodsb			/* loads character from %si to %al */
+	cmpb	$0, %al /* check that we are at the end of string */
+	jne	1b          /* display character if we are not at the end of string */
+	ret
+
+/* %si stores pointer to the notification_string */
+/* %bx represents foreground color */
+/* %ah number of BIOS service */
+/* int $10 - http://www.ctyme.com/intr/rb-0106.htm */
+1:  movw	$0x0001, %bx
+	movb	$0xe, %ah
+	int	$0x10
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;After we saw the &lt;code&gt;notification_string&lt;/code&gt; in our screen, the &lt;code&gt;boot.S&lt;/code&gt; starts to load first sector of the &lt;code&gt;core.img&lt;/code&gt; file which is represented by the &lt;code&gt;diskboot.img&lt;/code&gt; image. To read first sector of the &lt;code&gt;core.img&lt;/code&gt; we will use the &lt;code&gt;0x42&lt;/code&gt; function of the &lt;a href=&#34;http://www.ctyme.com/intr/rb-0708.htm&#34;&gt;0x13&lt;/a&gt; interrupt. First of all we need to check support of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Logical_block_addressing&#34;&gt;LBA&lt;/a&gt; in the BIOS by the call of the &lt;a href=&#34;http://www.ctyme.com/intr/rb-0706.htm&#34;&gt;0x41&lt;/a&gt; fuction of the &lt;code&gt;0x13&lt;/code&gt; interrupt:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	movb	$0x41, %ah
+	movw	$0x55aa, %bx
+	int	$0x13
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If the extended read or &lt;code&gt;LBA&lt;/code&gt; is supported we start to read first 512 bytes from the &lt;code&gt;core.img&lt;/code&gt;. To use extended read we must call the &lt;a href=&#34;http://www.ctyme.com/intr/rb-0708.htm&#34;&gt;0x42&lt;/a&gt; function of the &lt;code&gt;0x13&lt;/code&gt; interrupt with the following set of arguments:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;%ah&lt;/code&gt; register must contain number of the function, &lt;code&gt;0x42&lt;/code&gt; in our case;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;%dl&lt;/code&gt; register must contain number of the hard drive (starts from &lt;code&gt;0x80&lt;/code&gt;);&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;%ds:%si&lt;/code&gt; registers must point to the &lt;a href=&#34;http://www-pc.uni-regensburg.de/hardware/TECHDOK/ATA_EDD_11.PDF&#34;&gt;disk address packet structure&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The disk address packet structure is a data structure which contains data that helps to convert logical block addressing information to physical parameters (&lt;a href=&#34;https://en.wikipedia.org/wiki/Cylinder-head-sector&#34;&gt;Cylinders, Heads, Sectors&lt;/a&gt;) of a disk. Before the call of the &lt;code&gt;0x13&lt;/code&gt; interrupt, we need to fill disk address packet structure. In the our code it starts at the &lt;code&gt;disk_address_packet&lt;/code&gt; label. General structure of the disk address packet structure is:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Offset
+      +---------------------------------+
+  0	  |  Packet size in bytes           |
+  1   |  Reserved (must be 0)           |
+  2   |  Number of blocks to transfer   |
+  3   |  Reserved (must be 0)           |
+  4   |  Address of transfer buffer     |
+  8   |  Started absolute block number  |
+      +---------------------------------+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Address of the disk address packet structure is located in the &lt;code&gt;%si&lt;/code&gt; register:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	movw	$disk_address_packet, %si
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So, we can set reserved bytes to zero and packet size in our &lt;code&gt;disk_packet_packet&lt;/code&gt; with the:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;movw	$0x0010, (%si)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;packets size will be &lt;code&gt;16&lt;/code&gt; bytes here. We will read one 512 bytes block:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	xorw	%ax, %ax
+	...
+	incw	%ax
+	movw	%ax, 2(%si)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In the end we need to set block number:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	movl	LOCAL(kernel_sector), %ebx
+	movl	%ebx, 8(%si)
+	movl	LOCAL(kernel_sector_high), %ebx
+	movl	%ebx, 12(%si)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and pointer to the buffer where we will read data from disk:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	movw	$GRUB_BOOT_MACHINE_BUFFER_SEG, 6(%si)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and call the &lt;code&gt;0x13&lt;/code&gt; interrupt:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	movb	$0x42, %ah
+	int	    $0x13
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If all is good, the &lt;code&gt;GRUB_BOOT_MACHINE_BUFFER_SEG&lt;/code&gt; will point to the beginning of the &lt;code&gt;diskboot.img&lt;/code&gt; image in memory. In the of the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/boot/i386/pc/boot.S&#34;&gt;grub-core/boot/i386/pc/boot.S&lt;/a&gt; we relocate our buffer to the &lt;code&gt;GRUB_BOOT_MACHINE_KERNEL_ADDR&lt;/code&gt; or address and jump into it:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	jmp	*(LOCAL(kernel_address))
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;From this moment we have &lt;code&gt;diskboot.img&lt;/code&gt; (which is first 512 bytes of the &lt;code&gt;core.img&lt;/code&gt;) in the memory. As you may remember, the main point of the &lt;code&gt;diskboot.img&lt;/code&gt; is to load rest of the &lt;code&gt;core.img&lt;/code&gt; and jump into it. I will not describe this process here, it is pretty easy to understand if you understood previous description of how the &lt;code&gt;boot.S&lt;/code&gt; loads &lt;code&gt;diskboot.img&lt;/code&gt;. Both of these processes are prety similar. After the &lt;code&gt;diskboot.img&lt;/code&gt; will load rest of the &lt;code&gt;core.img&lt;/code&gt; it jumps to the GNU GRUB kernel code at &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/boot/i386/pc/startup_raw.S&#34;&gt;grub-core/boot/i386/pc/startup_raw.S&lt;/a&gt; source code file. The main point of this code is to make preparation before the &lt;a href=&#34;https://en.wikipedia.org/wiki/C_%28programming_language%29&#34;&gt;C&lt;/a&gt; code. You can remember that we need to prepare &lt;a href=&#34;https://en.wikipedia.org/wiki/.bss&#34;&gt;BSS&lt;/a&gt; section for global uninitialized data to run &lt;code&gt;C&lt;/code&gt; code and stack. Besides this we execute transition to &lt;a href=&#34;https://en.wikipedia.org/wiki/Protected_mode&#34;&gt;protected mode&lt;/a&gt;. Let&amp;rsquo;s look on this.&lt;/p&gt;
+
+&lt;p&gt;Before the transition to the protected mode, we set segment registers to the known value (zero in our case) and setup stack. After this we call the &lt;code&gt;real_to_prot&lt;/code&gt; function which is implemented in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/kern/i386/realmode.S&#34;&gt;grub-core/kern/i386/realmode.S&lt;/a&gt; assembly file. It starts from the loading of &lt;a href=&#34;http://wiki.osdev.org/Global_Descriptor_Table&#34;&gt;Global Descriptor Table&lt;/a&gt; with the &lt;code&gt;lgdt&lt;/code&gt; instruction:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;lgdtl	gdtdesc
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Where the &lt;code&gt;gdtdesc&lt;/code&gt; contains description of four segments:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Code segment;&lt;/li&gt;
+&lt;li&gt;Data segment;&lt;/li&gt;
+&lt;li&gt;Real-mode code segment;&lt;/li&gt;
+&lt;li&gt;Real-mode data segment.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;I will not describe what is it &lt;code&gt;GDT&lt;/code&gt; and why do we need in it in this post. More about it you can read more about it in the second &lt;a href=&#34;https://0xax.gitbooks.io/linux-insides/content/Booting/linux-bootstrap-2.html&#34;&gt;part&lt;/a&gt; of the linux-insides book. After we set the &lt;code&gt;Global Descriptor Table&lt;/code&gt;, we turn on protected mode by the setting &lt;code&gt;PE&lt;/code&gt; bit in the &lt;code&gt;%cr0&lt;/code&gt; &lt;a href=&#34;https://en.wikipedia.org/wiki/Control_register&#34;&gt;control register&lt;/a&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;	movl	%cr0, %eax
+	orl	$GRUB_MEMORY_CPU_CR0_PE_ON, %eax
+	movl	%eax, %cr0
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and jump to the protected mode. Next we clear segment registers, setup protected mode stack and load &lt;a href=&#34;https://en.wikipedia.org/wiki/Interrupt_descriptor_table&#34;&gt;interrupt descriptor table&lt;/a&gt; by the call of the &lt;code&gt;lidtl&lt;/code&gt; instruction:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;lidt protidt
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Interrupt descriptor table contains addresses of the interrupt handlers which are will be called when an interrupt occurs. After all of this manipulations we are in protected mode and may return to the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/boot/i386/pc/startup_raw.S&#34;&gt;grub-core/boot/i386/pc/startup_raw.S&lt;/a&gt; assembly file. In the end, we fill &lt;code&gt;%edx&lt;/code&gt;, &lt;code&gt;%edi&lt;/code&gt;, &lt;code&gt;%ecx&lt;/code&gt; and &lt;code&gt;%eax&lt;/code&gt; registers with the number of boot device, addresses of the &lt;code&gt;prot_to_real&lt;/code&gt; and &lt;code&gt;real_to_prot&lt;/code&gt; function which are helpers for transition between real/protected modes and address of the interrupt descriptor table. Now we can jump to the GNU GRUB kernel:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;movl	LOCAL(boot_dev), %edx
+movl	$prot_to_real, %edi
+movl	$real_to_prot, %ecx
+movl	$LOCAL(realidt), %eax
+jmp	*%esi
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The GNU GRUB kernel for &lt;a href=&#34;https://en.wikipedia.org/wiki/X86&#34;&gt;x86&lt;/a&gt; entry is in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/kern/i386/pc/startup.S&#34;&gt;grub-core/kern/i386/pc/startup.S&lt;/a&gt; assembly file. We are clearing space for the &lt;a href=&#34;https://en.wikipedia.org/wiki/.bss&#34;&gt;BSS&lt;/a&gt; section and call the first function which is written in &lt;code&gt;C&lt;/code&gt; programming language:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-assembly&#34;&gt;call EXT_C(grub_main)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;For this moment, we&amp;rsquo;ve been through the low-level part of the GNU GRUB. Of course, it is not the end of the assembly. But for now we have loaded kernel of the GNU GRUB into memory and transfered control to it which is writen mostly in C programming language. Well, let&amp;rsquo;s continue.&lt;/p&gt;
+
+&lt;h2 id=&#34;gnu-grub-kernel&#34;&gt;GNU GRUB kernel&lt;/h2&gt;
+
+&lt;p&gt;The &lt;code&gt;grub_main&lt;/code&gt; function defined in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/kern/main.c&#34;&gt;grub-core/kern/main.c&lt;/a&gt; source code file and its main purpose is to initialize architecture-specific stuff, to load/parse configuration file and modules, to set some environment variables and to load &lt;code&gt;normal&lt;/code&gt; mode. It starts from the call of the &lt;code&gt;grub_machine_init()&lt;/code&gt; function which is defined in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/kern/i386/pc/init.c&#34;&gt;grub-core/kern/i386/pc/init.c&lt;/a&gt; source code file. The &lt;code&gt;grub_machine_init&lt;/code&gt; function initializes console by the call of the:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;grub_console_init ();
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;which just call of:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;grub_term_register_output (&amp;quot;console&amp;quot;, &amp;amp;grub_console_term_output);
+grub_term_register_input (&amp;quot;console&amp;quot;, &amp;amp;grub_console_term_input);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;functions. These functions takes two parameters: the first is name of a console and the second is pointer to a structure which contains pointer to the actions on a given console, like &lt;code&gt;putchar&lt;/code&gt;, &lt;code&gt;cls&lt;/code&gt; and etc. In the next time, when print-like function will be called, the GNU GRUB will go through a list of registered consoles and will call their print API. After this the &lt;code&gt;grub_machine_init()&lt;/code&gt; function initializes memory regions and intializes &lt;a href=&#34;https://en.wikipedia.org/wiki/Time_Stamp_Counter&#34;&gt;Time stamp counter&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;After this we return to the &lt;code&gt;grub_main ()&lt;/code&gt; function which calls the &lt;code&gt;grub_load_config()&lt;/code&gt; function. As you can understand from the function&amp;rsquo;s name, it loads configuration file. The next step is loading of GNU GRUB modules which are represented by the &lt;a href=&#34;grub_load_config ();&#34;&gt;ELF&lt;/a&gt; files in the &lt;code&gt;/boot/grub/arch&lt;/code&gt;. For example:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://s3.postimg.org/bvfh7uatf/elf.png&#34; alt=&#34;grub-mod&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;After the GNU GRUB kernel will load modules, it sets &lt;code&gt;root&lt;/code&gt; and &lt;code&gt;prefix&lt;/code&gt; environment variables which are represent root device and prefix of GNU GRUB directory (by default it is &lt;code&gt;/boot/grub&lt;/code&gt;), parses configuration file, registers four core command: &lt;code&gt;ls&lt;/code&gt;, &lt;code&gt;set&lt;/code&gt;, &lt;code&gt;unset&lt;/code&gt; and &lt;code&gt;insmod&lt;/code&gt;. The last step of execution of the &lt;code&gt;grub_main ()&lt;/code&gt; function is the &lt;code&gt;grub_load_normal_mode ()&lt;/code&gt; function. This function defined in the same source code file as the &lt;code&gt;grub_main()&lt;/code&gt; function and it tries to load and execute the &lt;code&gt;normal&lt;/code&gt; module.&lt;/p&gt;
+
+&lt;p&gt;This module represents main module of GNU GRUB which starts to work after all of main low-level preparation. As we can read in the &lt;a href=&#34;http://www.gnu.org/software/grub/manual/grub.html#normal&#34;&gt;documentation&lt;/a&gt;:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;In normal mode, commands, filesystem modules, and cryptography modules are automatically loaded, and the full GRUB script parser is available&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;So, the &lt;code&gt;normal&lt;/code&gt; module/command is responsible for the user menu, loading of modules which are defined in the GNU GRUB configuration file with &lt;code&gt;insmod&lt;/code&gt; command, handling of user input and transfering control to the real loader of an operating system kernel. Let&amp;rsquo;s take a closer look on the &lt;code&gt;normal&lt;/code&gt; mode.&lt;/p&gt;
+
+&lt;h2 id=&#34;normal-mode&#34;&gt;Normal mode&lt;/h2&gt;
+
+&lt;p&gt;All code which is related to the &lt;code&gt;normal&lt;/code&gt; mode is located in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/normal&#34;&gt;grub-core/normal&lt;/a&gt; directory. As well as all the modules of GNU GRUB, the &lt;code&gt;normal.mod&lt;/code&gt; has definition of the &lt;code&gt;GRUB_MOD_INIT&lt;/code&gt; and &lt;code&gt;GRUB_MOD_FINI&lt;/code&gt; macros which are responsible for a module initialization and finalization. The &lt;code&gt;normal.mod&lt;/code&gt; sets a couple of environment variables like target processor, colors, pager and etc. Also it registers a set of command to clear screen, exit from normal mode and etc. In the end of the &lt;code&gt;grub_main()&lt;/code&gt; function we could see the call of the:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;grub_command_execute (&amp;quot;normal&amp;quot;, 0, 0);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;function which executes already registred command in the &lt;code&gt;GRUB_MOD_INIT(&amp;quot;normal&amp;quot;)&lt;/code&gt;. It looks:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;grub_register_command (&amp;quot;normal&amp;quot;, grub_cmd_normal,
+			           0, N_(&amp;quot;Enter normal mode.&amp;quot;));
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So, after the last step of the &lt;code&gt;grub_main()&lt;/code&gt; function, we will be in the &lt;code&gt;grub_cmd_normal()&lt;/code&gt; function. This function enters to the &lt;code&gt;normal&lt;/code&gt; mode. Practically it means that it reads configuration file of the GNU GRUB (&lt;code&gt;/boot/grub/grub.cfg&lt;/code&gt;) to the &lt;code&gt;grub_menu_t&lt;/code&gt; type which represents menu of the GNU GRUB and renders menu. We will skip many parts of this, like how menu renders and how it is represented in the source code of the GNU GRUB, because its not related directly with bootloading. The interesting part for us is that &lt;code&gt;grub_normal_execute()&lt;/code&gt; function calls the &lt;code&gt;grub_show_menu()&lt;/code&gt; function from the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/normal/menu.c&#34;&gt;grub-core/normal/menu.c&lt;/a&gt; source code file which in turn calls the &lt;code&gt;run_menu&lt;/code&gt; function.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;run_menu&lt;/code&gt; function provides interruptible sleep until a menu item is selected and returns the selected menu item:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;boot_entry = run_menu (menu, nested, &amp;amp;auto_boot);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;After the &lt;code&gt;run_menu()&lt;/code&gt; function will return index of selected menu item which is represented by the &lt;code&gt;grub_menu_entry&lt;/code&gt; structure, we need to execute this menu entry by the call of the &lt;code&gt;grub_menu_execute_entry&lt;/code&gt; function. This function takes two parameters:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Selected menu entry;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;auto_boot&lt;/code&gt; - shows that nothing was selected and timer is expired.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The &lt;code&gt;grub_menu_execute_entry()&lt;/code&gt; function is big enough. It checks that an user selected submenu and renders it in this case, it checks that selected menu entry needs in authentication if we put something like &lt;code&gt;--users user1&lt;/code&gt; to a menu entry and etc. But the greatest interest for us is the following code:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;grub_script_execute_new_scope (entry-&amp;gt;sourcecode, entry-&amp;gt;argc, entry-&amp;gt;args);
+...
+...
+...
+if (grub_errno == GRUB_ERR_NONE &amp;amp;&amp;amp; grub_loader_is_loaded ())
+    grub_command_execute (&amp;quot;boot&amp;quot;, 0, 0);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The first function takes the body of the selected menu entry, count of arguments and arguments of the GNU GRUB function and tries to execute it. For example if a body of your menu entry will be like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;linux	/vmlinuz-linux root=UUID=4680b48e-595e-4d03-9115-2db79206e9f9 rw  quiet
+echo	&#39;Loading initial ramdisk ...&#39;
+initrd	 /initramfs-linux.img
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The &lt;code&gt;grub_cmd_linux()&lt;/code&gt;, &lt;code&gt;grub_cmd_initrd()&lt;/code&gt; and the &lt;code&gt;grub_cmd_echo()&lt;/code&gt; functions will be called. After the GNU GRUB will handle script we check an error and that loader is loaded. If both conditions will be good, we execute &lt;code&gt;boot&lt;/code&gt; commands which will start to boot a kernel. Now we are stopped on the last step - loading of the Linux kernel.&lt;/p&gt;
+
+&lt;h2 id=&#34;ok-finally-lets-load-it&#34;&gt;Ok, finally lets load it&lt;/h2&gt;
+
+&lt;p&gt;A loader will be loaded during &lt;code&gt;linux&lt;/code&gt; command execution in the &lt;code&gt;grub_cmd_linux()&lt;/code&gt; function. This function is defined in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/loader/i386/linux.c&#34;&gt;grub-core/loader/i386/linux.c&lt;/a&gt; source code file. If you will look on the definition of the &lt;code&gt;linux&lt;/code&gt; command in your &lt;code&gt;/boot/grub/grub.cfg&lt;/code&gt; configuration file, you will see that this command takes path of the Linux kernel image as first argument. So, the &lt;code&gt;grub_cmd_linux()&lt;/code&gt; function starts from the check of the number of command line arguments:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;if (argc == 0)
+{
+    grub_error (GRUB_ERR_BAD_ARGUMENT, N_(&amp;quot;filename expected&amp;quot;));
+	goto fail;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If we have no command line arguments, print error and go to &lt;code&gt;fail&lt;/code&gt; label. After this we try to open and read the header of the Linux kernel image by the given path in the first command line argument. We are reading the Linux kernel image to the &lt;code&gt;struct linux_kernel_header lh&lt;/code&gt; structure which defined in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/include/grub/i386/linux.h&#34;&gt;include/grub/i386/linux.h&lt;/a&gt; header file and contains fields which are mapped to the &lt;a href=&#34;https://www.kernel.org/doc/Documentation/x86/boot.txt&#34;&gt;Linux boot protocol v 2.10&lt;/a&gt;. After we have read the header of the Linux kernel image, we make some checks for magic number (&lt;code&gt;0xaa55&lt;/code&gt;), that &lt;code&gt;setup_sects&lt;/code&gt; field is not greater than &lt;code&gt;64&lt;/code&gt; and etc. As we finished with checks, we need to calculate size of the Linux kernel image and read it full. After this we need to fill/calculate fields which are marked in the Linux boot protocol as &lt;code&gt;write&lt;/code&gt;. There fields are:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;code32_start&lt;/code&gt; - entry point of the Linux kernel in &lt;a href=&#34;https://en.wikipedia.org/wiki/Protected_mode&#34;&gt;protected mode&lt;/a&gt;. It is not neccecary, but can be updated for realocation;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;ramdisk_image&lt;/code&gt; - the 32-bit linear address of the initial ramdisk or ramfs;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;ramdisk_image_size&lt;/code&gt; - the size of the initial ramdisk or ramfs;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;heap_end_ptr&lt;/code&gt; - the offset of the end of the setup stack/heap, minus &lt;code&gt;0x0200&lt;/code&gt;;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;loadflags&lt;/code&gt; - bitmask which provides boot related flags.&lt;/li&gt;
+&lt;li&gt;and etc.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;So, we are setting the type of the bootloader which is the GNU GRUB (&lt;code&gt;0x72&lt;/code&gt;) in our case, offset for the Linux kernel command line, &lt;code&gt;ramdisk_image&lt;/code&gt; and &lt;code&gt;ramdisk_size&lt;/code&gt; to zero (these fields will be filled in the &lt;code&gt;grub_cmd_initrd()&lt;/code&gt;) and other fields:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;linux_params.type_of_loader = GRUB_LINUX_BOOT_LOADER_TYPE;
+linux_params.cl_magic = GRUB_LINUX_CL_MAGIC;
+linux_params.cl_offset = 0x1000;
+linux_params.ramdisk_image = 0;
+linux_params.ramdisk_size = 0;
+linux_params.heap_end_ptr = GRUB_LINUX_HEAP_END_OFFSET;
+linux_params.loadflags |= GRUB_LINUX_FLAG_CAN_USE_HEAP;
+...
+...
+...
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;After we have load the Linux kernel image into memory and have filled Linux kernel header with constructed command line, we check errors and set callback function for the Linux kernel booting. In our case this function will be &lt;code&gt;grub_linux_boot()&lt;/code&gt; function:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;if (grub_errno == GRUB_ERR_NONE)
+{
+    grub_loader_set (grub_linux_boot, grub_linux_unload, 0);
+    loaded = 1;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;where the &lt;code&gt;grub_loader_set()&lt;/code&gt; function sets:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;grub_loader_set (grub_err_t (*boot) (void),
+                 grub_err_t (*unload) (void),
+		         int flags)
+{
+    ...
+    grub_loader_boot_func = boot;
+    ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now let&amp;rsquo;s return to the &lt;code&gt;grub_menu_execute_entry()&lt;/code&gt; function. We have stopped at the following code there:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;grub_script_execute_new_scope (entry-&amp;gt;sourcecode, entry-&amp;gt;argc, entry-&amp;gt;args);
+
+if (grub_errno == GRUB_ERR_NONE &amp;amp;&amp;amp; grub_loader_is_loaded ())
+    grub_command_execute (&amp;quot;boot&amp;quot;, 0, 0);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The first line of code is executed and as we just saw, this function reads the body of a selected menu entry and executes commands from it. After the &lt;code&gt;grub_script_execute_new_scope&lt;/code&gt; will be finished, at least &lt;code&gt;linux&lt;/code&gt; and &lt;code&gt;initrd&lt;/code&gt; commands of GNU GRUB will be executed. This means that the header of the Linux kernel and &lt;a href=&#34;https://en.wikipedia.org/wiki/Initrd&#34;&gt;initrd&lt;/a&gt; will be loaded into the memory and fields of the Linux kernel header are parsed and needed fields of it will be calculated and filled. If everything is ok, the &lt;code&gt;if&lt;/code&gt; condition after the call of the &lt;code&gt;grub_script_execute_new_scope()&lt;/code&gt; function will return true and the &lt;code&gt;boot&lt;/code&gt; command will be execute.&lt;/p&gt;
+
+&lt;p&gt;The entry of the &lt;code&gt;boot&lt;/code&gt; command is the &lt;code&gt;grub_cmd_boot()&lt;/code&gt; function which defined in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/commands/boot.c&#34;&gt;grub-core/commands/boot.c&lt;/a&gt; source code file. Besides a couple of check, the point of the &lt;code&gt;grub_cmd_boot()&lt;/code&gt; function is to call &lt;code&gt;boot&lt;/code&gt; callback function which is set by the loader:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;err = (grub_loader_boot_func) ();
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In our case, this callback function was set in the &lt;code&gt;grub_loader_set()&lt;/code&gt; function and this function is &lt;code&gt;grub_linux_boot()&lt;/code&gt; function which defined in the &lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/grub-core/loader/i386/linux.c&#34;&gt;grub-core/loader/i386/linux.c&lt;/a&gt; source code file. The &lt;code&gt;grub_linux_boot()&lt;/code&gt; function sets video mode which is depends on values of &lt;code&gt;video&lt;/code&gt; parameters from the Linux kernel header, sets the Linux kernel command line offset, fills register and start&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C&#34;&gt;state.ebp = state.edi = state.ebx = 0;
+state.esi = ctx.real_mode_target;
+state.esp = ctx.real_mode_target;
+state.eip = ctx.params-&amp;gt;code32_start;
+return grub_relocator32_boot (relocator, state, 0);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The relocator of the GNU GRUB is big piece of code which prepares all registers to the state which is good for the Linux kernel, prepares environment to the actual processor mode which depends on relocator type (may be in real, protected or long mode), calculates base physical address of the Linux kernel and jumps on it.&lt;/p&gt;
+
+&lt;p&gt;From this moment we are in the kernel!&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s all.&lt;/p&gt;
+
+&lt;h2 id=&#34;conclusion&#34;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;We saw how the GNU GRUB loads the Linux kernel in this post. Of course, it is not fully cover booting process of the Linux kernel and it also does not cover full aspects of the GNU GRUB. We have missed some things like how does GRUB manage filesystem related work, memory management related stuff, styles and appereance of menu and etc. This is not real to cover all of this topics and especially full source code of the such project like the GNU GRUB in one post. But I hope, you&amp;rsquo;ll like it and you will research other boot related things with yourself.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Questions/Suggestions&lt;/strong&gt;: Feel free about any questions or suggestions by pinging me at twitter &lt;a href=&#34;https://twitter.com/0xAX&#34;&gt;@0xAX&lt;/a&gt;, adding an issue or just drop me an &lt;a href=&#34;kuleshovmail@gmail.com&#34;&gt;email&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Please note that English is not my first language and I am really sorry for any inconvenience. If you found any mistakes please send me PR to &lt;a href=&#34;https://github.com/0xAX/0xAX.github.io/tree/source&#34;&gt;0xax.github.com&lt;/a&gt; or just drop me an &lt;a href=&#34;kuleshovmail@gmail.com&#34;&gt;email&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;links&#34;&gt;Links&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.gnu.org/software/grub/&#34;&gt;GNU GRUB&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://git.savannah.gnu.org/cgit/grub.git/tree/&#34;&gt;GNU GRUB git web interface&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Assembly_language&#34;&gt;assembly programming language&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://0xax.gitbooks.io/linux-insides/content/index.html&#34;&gt;linux-insides&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Initrd&#34;&gt;initrd&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Executable_and_Linkable_Format&#34;&gt;ELF&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Advanced_Configuration_and_Power_Interface&#34;&gt;Advanced Configuration and Power Interface&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Master_boot_record&#34;&gt;Master boot record&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Partition_table&#34;&gt;partition table&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/BIOS_parameter_block&#34;&gt;BIOS parameter block&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Logical_block_addressing&#34;&gt;LBA&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Cylinder-head-sector&#34;&gt;Cylinders, Heads, Sectors&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/.bss&#34;&gt;BSS&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Protected_mode&#34;&gt;protected mode&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://wiki.osdev.org/Global_Descriptor_Table&#34;&gt;Global Descriptor Table&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Interrupt_descriptor_table&#34;&gt;interrupt descriptor table&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Time_Stamp_Counter&#34;&gt;Time stamp counter&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.kernel.org/doc/Documentation/x86/boot.txt&#34;&gt;Linux kernel boot protocol&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

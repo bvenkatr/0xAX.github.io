@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> &middot; Just a memo</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.17-DEV" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content=" &middot; Just a memo">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content=" &middot; Just a memo">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="https://0xax.github.io/css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="Just a memo" href="https://0xax.github.io/index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="https://0xax.github.io">Just a memo</a></h1>
+            <h2 class="brand-tagline"> Just a memo </h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="https://twitter.com/0xAX"><i class="fa fa-twitter"></i> Twitter</a>
+                </li>
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="https://github.com/0xAX "><i class="fa fa-github-alt"></i> github</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="https://0xax.github.io/index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                <h1 class="content-subhead">01 Jan 0001, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://0xax.github.io/start_with_elixir/" class="post-title"></a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+                    
+                    <div class="post-share">
+                        <div class="post-share-links">
+                            <h4 style="">Share</h4>
+                            <a href="#" data-type="facebook" data-url="https://0xax.github.io/start_with_elixir/" data-title="" data-description="" data-media="" class="prettySocial fa fa-facebook"></a>
+                            <a href="#" data-type="googleplus" data-url="https://0xax.github.io/start_with_elixir/" data-description="" class="prettySocial fa fa-google-plus"></a>
+                            
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="post-description">
+                        <p>Title: Getting started with elixir
+Date: 2014-05-10
+Tags: elixir
+Authors:  Alexander Kuleshov</p>
+
+<p>Some times ago i decided to start new hobby project and in front of me had the task which instrument to choose for this task implementation. From the header you can guess that i decided to use Elixir. Why Elixir? The main reason is simple: I like Erlang and all it&rsquo;s infrastructure, but in the same time i want to try something new and i think Elixir the best candidate for it. Now more details why i choose Elixir.</p>
+
+<p>First of all quote from Elixir site:</p>
+
+<pre><code>Elixir is a functional, meta-programming aware language built on top of the Erlang VM. It is a dynamic language with flexible syntax and macro support that leverages Erlang's abilities to build concurrent, distributed and fault-tolerant applications with hot code upgrades.
+</code></pre>
+
+<p>Yes, meta-programming built on top of Erlang VM, very good start, what we have at the current moment.</p>
+
+<ol>
+<li>Familiar to us patter matching:</li>
+</ol>
+
+<pre><code class="language-elixir">iex(1)&gt; a = 5
+5
+iex(2)&gt; 5 = a
+5
+iex(3)&gt; list = [1,2,3]
+[1, 2, 3]
+iex(4)&gt; [_, _, third] = list
+[1, 2, 3]
+iex(5)&gt; third
+3
+</code></pre>
+
+<ol>
+<li>Immutability:</li>
+</ol>
+
+<pre><code class="language-elixir">list = [1,2,3,4,5,6]
+[1, 2, 3, 4, 5, 6]
+iex(2)&gt; list2 = [0 | list]
+[0, 1, 2, 3, 4, 5, 6]
+</code></pre>
+
+<p>the <code>list</code> will never change, so it simply constructs a new list with a head of 0 and a tail of list.</p>
+
+<ol>
+<li>Familiar and extended data types. Elixir’s built-in types are:</li>
+</ol>
+
+<p>• Value types:
+  – Arbitrary-sized integers
+  – Floating point numbers
+  – Atoms
+  – Regular expressions</p>
+
+<p>• System types:
+  – PIDs and Ports
+  – References</p>
+
+<p>• Collection types
+  – Lists
+  – Tuples
+  – Binaries</p>
+
+<p>And also: Keyword Lists, Ranges, Dictionaries, Maps and etc.</p>
+
+<ol>
+<li>High Order functions</li>
+</ol>
+
+<pre><code class="language-elixir">iex(1)&gt; f = :lists.map(fn elem -&gt; elem * 5 end, [1,2,3,4,5])
+[5, 10, 15, 20, 25]
+</code></pre>
+
+<ol>
+<li>The Amazing Pipes Operator</li>
+</ol>
+
+<pre><code class="language-elixir">iex(1)&gt; import Enum
+nil
+iex(2)&gt; (1..10) |&gt; map(&amp;1*&amp;1) |&gt; filter(&amp;1 &lt; 40)
+[1, 4, 9, 16, 25, 36]
+</code></pre>
+
+<ol>
+<li>Of course <a href="http://www.erlang.org/doc/design_principles/users_guide.html">OTP</a>:</li>
+</ol>
+
+<pre><code class="language-elixir">defmodule OtpServer do
+  use GenServer.Behaviour
+
+  def init(current_number)
+    when is_number(current_number) do
+      { :ok, current_number }
+    end
+
+  def handle_call(:next_number, _from, current_number) do
+    { :reply, current_number, current_number+1 }
+  end
+end
+</code></pre>
+
+<p>And many many more&hellip;</p>
+
+                    </div>
+                    
+                </section>
+            </div>
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+            <li>Powered by <a class="hugo" href="https://gohugo.io/" target="_blank">hugo</a></li>
+        </ul>
+    </div>
+</div>
+<script src="https://0xax.github.io/js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

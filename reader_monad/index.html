@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> &middot; Just a memo</title>
+
+    <meta name="description" content="">
+
+    <meta name="generator" content="Hugo 0.17-DEV" />
+    <meta name="twitter:card" content="summary">
+    
+    <meta name="twitter:title" content=" &middot; Just a memo">
+    <meta name="twitter:description" content="">
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content=" &middot; Just a memo">
+    <meta property="og:description" content="">
+
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Oxygen:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+    <!--<![endif]-->
+
+    <link rel="stylesheet" href="https://0xax.github.io/css/all.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="Just a memo" href="https://0xax.github.io/index.xml" />
+</head>
+<body>
+
+
+<div id="layout" class="pure-g">
+    <div class="sidebar pure-u-1 pure-u-md-1-4">
+    <div class="header">
+        <hgroup>
+            <h1 class="brand-title"><a href="https://0xax.github.io">Just a memo</a></h1>
+            <h2 class="brand-tagline"> Just a memo </h2>
+        </hgroup>
+
+        <nav class="nav">
+            <ul class="nav-list">
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="https://twitter.com/0xAX"><i class="fa fa-twitter"></i> Twitter</a>
+                </li>
+                
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="https://github.com/0xAX "><i class="fa fa-github-alt"></i> github</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="pure-button" href="https://0xax.github.io/index.xml"><i class="fa fa-rss"></i> rss</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+
+    <div class="content pure-u-1 pure-u-md-3-4">
+        <div>
+            
+            <div class="posts">
+                <h1 class="content-subhead">01 Jan 0001, 00:00</h1>
+                <section class="post">
+                    <header class="post-header">
+
+                        <a href="https://0xax.github.io/reader_monad/" class="post-title"></a>
+
+                        <p class="post-meta">
+                            
+                            
+                        </p>
+                    </header>
+                    
+                    <div class="post-share">
+                        <div class="post-share-links">
+                            <h4 style="">Share</h4>
+                            <a href="#" data-type="facebook" data-url="https://0xax.github.io/reader_monad/" data-title="" data-description="" data-media="" class="prettySocial fa fa-facebook"></a>
+                            <a href="#" data-type="googleplus" data-url="https://0xax.github.io/reader_monad/" data-description="" class="prettySocial fa fa-google-plus"></a>
+                            
+                            
+                        </div>
+                    </div>
+                    
+                    <div class="post-description">
+                        
+
+<p>Title: Reader monad understanding
+Date: 2014-03-04
+Tags: haskell
+Authors:  Alexander Kuleshov</p>
+
+<p>Some time ago I started to learn Haskell. It&rsquo;s not the first time (and event not second) that I started to learn this language. Every time I met different problems with understanding different abstractions like a Monads, Arrows, Monad Transformers and etc&hellip; I think that I&rsquo;m not alone with this :) But, in this time, I decided not to throw up training until I can not say: yes I can write in Haskell without pain. I started (as every time i did it) with the most popular book (for newbies) about Haskell - Learn You a Haskell and stopped at Reader monad. Spending some time I understand it (at least I think that I understand :)) and decided to share my understanding of this monad for the same newbie haskellers as me.</p>
+
+<p>Let&rsquo;s imagine simple and ubiquitous case that we have application which needs in some initial configurations. Application will get configuration form configuration file, let it be conf.js with very simple structure like this:</p>
+
+<pre><code class="language-javascript">{
+  &quot;username&quot; : &quot;0xAX&quot;
+}
+</code></pre>
+
+<p>It just has 1 <code>username</code> key. Of course it has very little resemblance with the real application configuration, but it is not important now and enough for the example. We will read it with great Aeson library from Bryan O&rsquo;Sullivan and use it in our application. Let&rsquo;s start with reading configuration file content and decoding json.</p>
+
+<h2 id="aeson">Aeson</h2>
+
+<p>For the start we must define data type for mapping json data in it with Aeson. As you can see above, we have simple json structure with username key. So we will map this json structure to the following data type:</p>
+
+<pre><code class="language-haskell">data ConfigStructure =
+  ConfigStructure {
+           key1 :: String,
+           key2 :: String
+         } deriving(Generic)
+</code></pre>
+
+<p>The <code>ConfigStructure</code> has the same structure as our json, it has same fields: username. After data type creation we must read our configuration file with json data and decode it with aeson:</p>
+
+<pre><code class="language-haskell">configPath :: String
+configPath = &quot;conf.json&quot;
+
+getConfigContent :: IO ConfigStructure
+getConfigContent = do
+  configContent &lt;- BSL.readFile configPath
+  let Just decodedConfig = decode configContent :: Maybe ConfigStructure
+  return decodedConfig
+</code></pre>
+
+<p>Here you can see that we reading json file with readFile function from Data.ByteString.Lazy. It has following type:</p>
+
+<pre><code>    Prelude&gt; import qualified Data.ByteString.Lazy as BSL
+    Prelude BSL&gt; :t BSL.readFile
+    BSL.readFile :: FilePath -&gt; IO BSL.ByteString
+</code></pre>
+
+<p>where FilePath is just String. Read configuration file and get it&rsquo;s content. After getting content of configuration file using Data.Aeson.decode function for decoding json data from it. After successful decoding we get Just ConfigStructure and now we can build Config data type for Reader and pass configuration file content to it.</p>
+
+<h2 id="reader-monad">Reader Monad</h2>
+
+<p>And now we come to the main point of this post. Main point of Reader monad to share read-only environment between couple of functions. Let&rsquo;s see how Reader declared in Control.Monad.Reader:</p>
+
+<pre><code class="language-haskell">newtype Reader r a = Reader { runReader :: r -&gt; a}
+</code></pre>
+
+<p>We can see that it made as wrapper for runReader function with type r -&gt; a where:</p>
+
+<ul>
+<li><code>r</code> - is a reader which need to run and get final value from it;</li>
+<li><code>a</code> - is an environment which need to share</li>
+</ul>
+
+<p>Another words we can build abstraction that will share configuration file content between different functions. Let&rsquo;s see how to implement it.</p>
+
+<pre><code class="language-haskell">type Config = Reader ConfigStructure String
+</code></pre>
+
+<p>Here we can see Config type synonym for Reader ConfigStructure String. Here ConfigStructure (see above) will be environment which we will share between functions and String return type. Now we write function for getting value of username field from configuration file:</p>
+
+<pre><code class="language-haskell">getKeyOne :: Config
+getKeyOne = do
+  config &lt;- ask
+  return (key1 config)
+</code></pre>
+
+<p>As you can see it&rsquo;s pretty simple. Here is only one thing which we don&rsquo;t know - ask function. ask function retrieves the monad environment. Pretty simple. Now we can get username in any place of our application with runReader function. As you can remember runReader function has following type:</p>
+
+<pre><code class="language-haskell">runReader :: r -&gt; a
+</code></pre>
+
+<p>Where r is a reader which need to run (getKeyOne in our case) and a is environment (configuration file content in our case). Again pretty simple. We can get value of username with:</p>
+
+<pre><code class="language-haskell">-- read configuration file
+decodedConfig &lt;- getConfigContent
+-- get &amp; print value of key1
+putStrLn $ runReader getKeyOne $ decodedConfig
+</code></pre>
+
+                    </div>
+                    
+                </section>
+            </div>
+            <div class="footer">
+    <div class="pure-menu pure-menu-horizontal pure-menu-open">
+        <ul>
+            <li>Powered by <a class="hugo" href="https://gohugo.io/" target="_blank">hugo</a></li>
+        </ul>
+    </div>
+</div>
+<script src="https://0xax.github.io/js/all.min.js"></script>
+
+        </div>
+    </div>
+</div>
+
+
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', '', 'auto');
+ga('send', 'pageview');
+
+</script>
+
+</body>
+</html>

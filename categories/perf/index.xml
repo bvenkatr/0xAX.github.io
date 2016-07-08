@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Perf on Just a memo</title>
+    <link>https://0xAX.github.io/categories/perf/</link>
+    <description>Recent content in Perf on Just a memo</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 13 Jan 2014 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://0xAX.github.io/categories/perf/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Get function execution time in Haskell</title>
+      <link>https://0xax.github.io/haskel-execution-time/</link>
+      <pubDate>Mon, 13 Jan 2014 00:00:00 +0000</pubDate>
+      
+      <guid>https://0xax.github.io/haskel-execution-time/</guid>
+      <description>
+
+&lt;p&gt;Some times ago I encountered with question: How to get function execution time in Haskell program? I asked this question at &lt;a href=&#34;http://stackoverflow.com/questions/6766450/haskell-function-execution-time&#34;&gt;StackOverflow&lt;/a&gt;, and got some useful answers. Here i will try to describe how to do it. For example we have simple haskell program which will calculate sum of prime numbers which are between 0 and 10000. Something like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-haskell&#34;&gt;module TimingTest where
+
+main :: IO()
+main = do
+	putStrLn &amp;quot;Start&amp;quot;
+	putStrLn (&amp;quot;Result: &amp;quot; ++ show primesSum)
+	putStrLn &amp;quot;Done&amp;quot;
+
+
+--
+-- Returns True if `n` is prime
+--
+isPrime :: Int -&amp;gt; Bool
+isPrime n = null [ x | x &amp;lt;- [2..n - 1], n `mod` x  == 0]
+
+primesSum :: Int
+primesSum = sum [x | x &amp;lt;- [2..10000], isPrime x == True]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Yes, it&amp;rsquo;s not the best implementation of prime numbers, but it&amp;rsquo;s not important at the current moment. Let&amp;rsquo;s see what we have for checking execution time.&lt;/p&gt;
+
+&lt;h2 id=&#34;time&#34;&gt;Time&lt;/h2&gt;
+
+&lt;p&gt;First of all, the simplest method to get execution time is time command. Compile our source code and execute:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ time ./TimingTest
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We must get something like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;real 0m3.503s
+user 0m3.492s
+sys 0m0.004s
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&#34;ghci&#34;&gt;GHCI&lt;/h2&gt;
+
+&lt;p&gt;The second method is just add &lt;code&gt;:set +s&lt;/code&gt; in &lt;code&gt;ghci&lt;/code&gt; before the function execution. Of course it&amp;rsquo;s not the best method, because functions run much slower in `&lt;code&gt;ghci&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;timeit&#34;&gt;TimeIt&lt;/h2&gt;
+
+&lt;p&gt;The third method is to use &lt;a href=&#34;http://hackage.haskell.org/package/timeit&#34;&gt;TimeIt&lt;/a&gt; haskell library by Lennart Augustsson. Very little, but useful library with simple API. It consist only from two functions:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-haskell&#34;&gt;timeIt :: IO a -&amp;gt; IO a -- | Wrap an IO computation so that it prints out the execution time
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-haskell&#34;&gt;timeItT :: IO a -&amp;gt; IO (Double, a)Source -- | Wrap an IO computation so that it returns execution time is seconds as well as the real value.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Let&amp;rsquo;s remake our main function as:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-haskell&#34;&gt;import System.TimeIt
+
+main :: IO()
+main = do
+ 	putStrLn &amp;quot;Start&amp;quot;
+	timeIt $ putStrLn (&amp;quot;Result: &amp;quot; ++ show primesSum)
+	putStrLn &amp;quot;End&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and will get something like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Start
+Result: 5736396
+CPU time: 8.22s
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&#34;criterion&#34;&gt;Criterion&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://hackage.haskell.org/package/criterion&#34;&gt;Criterion&lt;/a&gt; library provides a powerful but simple way to measure software performance by Bryan O&amp;rsquo;Sullivan. For using it, will remake again our main function as:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-haskell&#34;&gt;module Main where
+
+import Criterion.Main
+
+main :: IO()
+main = defaultMain [
+       bgroup &amp;quot;Prime numbers.&amp;quot; [bench &amp;quot;prime numbers benchmark&amp;quot; $ whnfIO (putStrLn $ show primesSum)]
+       ]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and as a result we will get:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;estimating clock resolution...
+mean is 3.760062 us (160001 iterations)
+found 3006 outliers among 159999 samples (1.9%)
+2461 (1.5%) high severe
+
+estimating cost of a clock call...
+mean is 98.08812 ns (28 iterations)
+found 4 outliers among 28 samples (14.3%)
+4 (14.3%) low severe
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
